@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from "@/components/ui/button"
 import { AuthDialog } from "@/components/auth-dialog"
@@ -12,13 +13,13 @@ import { useRouter } from 'next/navigation'
 export default function LandingPage() {
   const [user] = useAuthState(auth)
   const router = useRouter()
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false)
 
   const handleStartRefinancing = () => {
     if (user) {
       router.push('/home')
     } else {
-      // If not logged in, open the AuthDialog
-      document.querySelector<HTMLButtonElement>('[data-auth-trigger]')?.click()
+      setIsAuthDialogOpen(true)
     }
   }
 
@@ -34,7 +35,12 @@ export default function LandingPage() {
           </span>
         </Link>
         <nav className="ml-auto flex gap-6 items-center">
-          <AuthDialog variant="text" triggerClassName="text-sm font-medium" data-auth-trigger />
+          <AuthDialog 
+            variant="text" 
+            triggerClassName="text-sm font-medium" 
+            isOpen={isAuthDialogOpen}
+            onOpenChange={setIsAuthDialogOpen}
+          />
         </nav>
       </header>
       <main className="flex-1 overflow-hidden">
