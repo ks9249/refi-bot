@@ -4,25 +4,108 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from "@/components/ui/button"
-import { DollarSign, ArrowRight, LogOut } from 'lucide-react'
-import Image from 'next/image'
+import { DollarSign, ArrowRight, ArrowLeft, LogOut } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
 import { useAuthState } from 'react-firebase-hooks/auth'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
+import PersonalInfoStep from '@/components/PersonalInfoStep'
+import EducationEmploymentStep from '@/components/EducationEmploymentStep'
+import LoanInfoStep from '@/components/LoanInfoStep'
+import FinancialDetailsStep from '@/components/FinancialDetailsStep'
 
-interface UserData {
+// Define interfaces for each step's data
+interface PersonalInfoData {
   firstName: string;
   lastName: string;
   email: string;
-  birthday: string;
-  customerId: string;
-  createdAt: string;
+  phone: string;
+  address: string;
+  dateOfBirth: string;
 }
 
-export default function HomePage() {
+interface EducationEmploymentData {
+  education: string;
+  school: string;
+  graduationYear: string;
+  employer: string;
+  occupation: string;
+  employmentLength: string;
+}
+
+interface LoanInfoData {
+  loanType: string;
+  loanAmount: number;
+  interestRate: number;
+  loanTerm: number;
+  currentLender: string;
+}
+
+interface FinancialDetailsData {
+  annualIncome: number;
+  monthlyDebt: number;
+  creditScore: number;
+  bankruptcyHistory: boolean;
+  cosignerAvailable: boolean;
+}
+
+// Combined form data type
+interface FormData {
+  personalInfo?: PersonalInfoData;
+  educationEmployment?: EducationEmploymentData;
+  loanInfo?: LoanInfoData;
+  financialDetails?: FinancialDetailsData;
+}
+
+// Base props interface that all steps will share
+interface BaseStepProps {
+  formData: FormData;
+}
+
+// Specific props interfaces for each step
+interface PersonalInfoStepProps extends BaseStepProps {
+  onSubmit: (data: PersonalInfoData) => void;
+}
+
+interface EducationEmploymentStepProps extends BaseStepProps {
+  onSubmit: (data: EducationEmploymentData) => void;
+}
+
+interface LoanInfoStepProps extends BaseStepProps {
+  onSubmit: (data: LoanInfoData) => void;
+}
+
+interface FinancialDetailsStepProps extends BaseStepProps {
+  onSubmit: (data: FinancialDetailsData) => void;
+}
+
+// Union type for all possible step components
+type StepComponent = 
+  | React.ComponentType<PersonalInfoStepProps>
+  | React.ComponentType<EducationEmploymentStepProps>
+  | React.ComponentType<LoanInfoStepProps>
+  | React.ComponentType<FinancialDetailsStepProps>;
+
+interface Step {
+  id: number;
+  name: string;
+  component: StepComponent;
+}
+
+const steps: Step[] = [
+  { id: 1, name: 'Personal Information', component: PersonalInfoStep },
+  { id: 2, name: 'Education & Employment', component: EducationEmploymentStep },
+  { id: 3, name: 'Loan Information', component: LoanInfoStep },
+  { id: 4, name: 'Financial Details', component: FinancialDetailsStep }
+]
+
+export default function SurveyPage() {
   const [user, loading] = useAuthState(auth)
-  const [userData, setUserData] = useState<UserData | null>(null)
+  const [currentStep, setCurrentStep] = useState(1)
+  const [formData, setFormData] = useState<FormData>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [checkingSurvey, setCheckingSurvey] = useState(true)
+  const [surveyCompleted, setSurveyCompleted] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -32,15 +115,24 @@ export default function HomePage() {
   }, [user, loading, router])
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid))
-        if (userDoc.exists()) {
-          setUserData(userDoc.data() as UserData)
+    const checkExistingSurvey = async () => {
+      if (!user) return
+      
+      try {
+        const userDocRef = doc(db, 'users', user.uid)
+        const userDoc = await getDoc(userDocRef)
+        
+        if (userDoc.exists() && userDoc.data()?.surveyData) {
+          setSurveyCompleted(true)
         }
+      } catch (error) {
+        console.error('Error checking survey data:', error)
+      } finally {
+        setCheckingSurvey(false)
       }
     }
-    fetchUserData()
+
+    checkExistingSurvey()
   }, [user])
 
   const handleSignOut = () => {
@@ -48,11 +140,90 @@ export default function HomePage() {
     router.push('/')
   }
 
-  if (loading || !user || !userData) {
+  const handleNext = (
+    stepData: PersonalInfoData | EducationEmploymentData | LoanInfoData | FinancialDetailsData
+  ) => {
+    setFormData(prev => {
+      const key = getStepKey(currentStep)
+      return { ...prev, [key]: stepData }
+    })
+    if (currentStep < steps.length) {
+      setCurrentStep(prev => prev + 1)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1)
+    }
+  }
+
+  const handleSubmit = async (finalStepData: FinancialDetailsData) => {
+    if (!user) return
+
+    setSubmitting(true)
+    try {
+      const completeFormData: FormData = {
+        ...formData,
+        financialDetails: finalStepData
+      }
+
+      // Reference to the user's document
+      const userDocRef = doc(db, 'users', user.uid)
+
+      // Check if the user document already exists
+      const userDoc = await getDoc(userDocRef)
+
+      if (userDoc.exists()) {
+        // Update existing document
+        await updateDoc(userDocRef, {
+          ...userDoc.data(),
+          surveyData: completeFormData,
+          lastUpdated: new Date().toISOString()
+        })
+      } else {
+        // Create new document
+        await setDoc(userDocRef, {
+          userId: user.uid,
+          email: user.email,
+          surveyData: completeFormData,
+          createdAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        })
+      }
+
+      setSurveyCompleted(true)
+    } catch (error) {
+      console.error('Error submitting form:', error)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const getStepKey = (step: number): keyof FormData => {
+    switch (step) {
+      case 1:
+        return 'personalInfo'
+      case 2:
+        return 'educationEmployment'
+      case 3:
+        return 'loanInfo'
+      case 4:
+        return 'financialDetails'
+      default:
+        throw new Error('Invalid step')
+    }
+  }
+
+  if (loading || checkingSurvey) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
 
-  return (
+  if (!user) {
+    return null
+  }
+
+  const Layout = ({ children }: { children: React.ReactNode }) => (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-zinc-100 to-white dark:from-zinc-900 dark:to-zinc-800">
       <header className="px-4 lg:px-8 h-14 flex items-center border-b bg-white/50 backdrop-blur-sm dark:bg-zinc-900/50">
         <Link className="flex items-center justify-center" href="#">
@@ -70,50 +241,9 @@ export default function HomePage() {
           </Button>
         </nav>
       </header>
-      <main className="flex-1 overflow-hidden">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 relative">
-          <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid gap-8 lg:grid-cols-2 lg:gap-16 items-center">
-              <div className="flex flex-col justify-center space-y-8 px-0 lg:px-4">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-bold tracking-tight sm:text-6xl xl:text-7xl/none text-foreground">
-                    Welcome, {userData.firstName}!
-                  </h1>
-                  <p className="max-w-[600px] text-xl text-muted-foreground">
-                    Here's your account information:
-                  </p>
-                </div>
-                <div className="space-y-4">
-                  <p><strong>Full Name:</strong> {userData.firstName} {userData.lastName}</p>
-                  <p><strong>Email:</strong> {userData.email}</p>
-                  <p><strong>Birthday:</strong> {userData.birthday}</p>
-                  <p><strong>Customer ID:</strong> {userData.customerId}</p>
-                  <p><strong>Account Created:</strong> {new Date(userData.createdAt).toLocaleDateString()}</p>
-                </div>
-                <div className="flex flex-col gap-3 min-[400px]:flex-row">
-                  <Button size="lg" className="bg-primary hover:bg-primary/90">
-                    Start Refinancing <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="lg" className="border-2" asChild>
-                    <Link href="/learn">Learn More</Link>
-                  </Button>
-                </div>
-              </div>
-              <div className="relative h-full">
-                <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 to-purple-500/30 opacity-20 blur-3xl" />
-                <Image
-                  src="/student-loan-freedom.jpg"
-                  alt="Student celebrating financial freedom"
-                  className="relative rounded-2xl shadow-2xl border dark:border-white/10 w-full h-full object-cover"
-                  width={700}
-                  height={700}
-                  priority
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
+
+      {children}
+
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t bg-white/50 backdrop-blur-sm dark:bg-zinc-900/50">
         <div className="flex-grow"></div>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
@@ -122,5 +252,79 @@ export default function HomePage() {
         </nav>
       </footer>
     </div>
+  )
+
+  if (surveyCompleted) {
+    return (
+      <Layout>
+        <main className="flex-1 container max-w-4xl mx-auto px-4 py-8 flex items-center justify-center">
+          <h1 className="text-4xl font-bold">Home</h1>
+        </main>
+      </Layout>
+    )
+  }
+
+  const CurrentStepComponent = steps[currentStep - 1].component
+  const currentStepProps = {
+    formData,
+    onSubmit: currentStep === steps.length ? handleSubmit : handleNext
+  } as any
+
+  return (
+    <Layout>
+      <main className="flex-1 container max-w-4xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <nav className="flex justify-center">
+            <ol className="flex items-center space-x-4">
+              {steps.map((step, index) => (
+                <li key={step.id} className="flex items-center">
+                  <div className={`flex items-center ${
+                    currentStep >= step.id ? 'text-primary' : 'text-muted-foreground'
+                  }`}>
+                    <span className={`w-8 h-8 flex items-center justify-center rounded-full ${
+                      currentStep >= step.id ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                    }`}>
+                      {step.id}
+                    </span>
+                    <span className="ml-2 text-sm font-medium">{step.name}</span>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className="ml-4 w-8 h-px bg-muted-foreground" />
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </div>
+
+        <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6">
+          <CurrentStepComponent {...currentStepProps} />
+          
+          <div className="mt-8 flex justify-between">
+            {currentStep > 1 && (
+              <Button type="button" variant="outline" onClick={handlePrevious}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Previous
+              </Button>
+            )}
+            {currentStep === 1 && <div />}
+            <Button
+              type="submit"
+              form={`step-${currentStep}-form`}
+              disabled={submitting}
+            >
+              {currentStep === steps.length ? (
+                submitting ? 'Submitting...' : 'Submit Application'
+              ) : (
+                <>
+                  Next
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </main>
+    </Layout>
   )
 }
