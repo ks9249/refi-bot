@@ -1,25 +1,55 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from "@/components/ui/button"
-import { AuthDialog } from "@/components/auth-dialog"
-import { DollarSign, ArrowRight } from 'lucide-react'
+import { DollarSign, ArrowRight, LogOut } from 'lucide-react'
 import Image from 'next/image'
+import { auth, db } from '@/lib/firebase'
 import { useAuthState } from 'react-firebase-hooks/auth'
-import { auth } from '@/lib/firebase'
-import { useRouter } from 'next/navigation'
+import { doc, getDoc } from 'firebase/firestore'
+import { signOut } from 'firebase/auth'
 
-export default function LandingPage() {
-  const [user] = useAuthState(auth)
+interface UserData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  birthday: string;
+  customerId: string;
+  createdAt: string;
+}
+
+export default function HomePage() {
+  const [user, loading] = useAuthState(auth)
+  const [userData, setUserData] = useState<UserData | null>(null)
   const router = useRouter()
 
-  const handleStartRefinancing = () => {
-    if (user) {
-      router.push('/home')
-    } else {
-      // If not logged in, open the AuthDialog
-      document.querySelector<HTMLButtonElement>('[data-auth-trigger]')?.click()
+  useEffect(() => {
+    if (!user && !loading) {
+      router.push('/')
     }
+  }, [user, loading, router])
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid))
+        if (userDoc.exists()) {
+          setUserData(userDoc.data() as UserData)
+        }
+      }
+    }
+    fetchUserData()
+  }, [user])
+
+  const handleSignOut = () => {
+    signOut(auth)
+    router.push('/')
+  }
+
+  if (loading || !user || !userData) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
 
   return (
@@ -34,7 +64,10 @@ export default function LandingPage() {
           </span>
         </Link>
         <nav className="ml-auto flex gap-6 items-center">
-          <AuthDialog variant="text" triggerClassName="text-sm font-medium" data-auth-trigger />
+          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
         </nav>
       </header>
       <main className="flex-1 overflow-hidden">
@@ -44,14 +77,21 @@ export default function LandingPage() {
               <div className="flex flex-col justify-center space-y-8 px-0 lg:px-4">
                 <div className="space-y-4">
                   <h1 className="text-4xl font-bold tracking-tight sm:text-6xl xl:text-7xl/none text-foreground">
-                    Simplify Your Student Loan Refinancing
+                    Welcome, {userData.firstName}!
                   </h1>
                   <p className="max-w-[600px] text-xl text-muted-foreground">
-                    Unlock better rates and smarter repayment options with our AI-powered refinancing assistant.
+                    Here's your account information:
                   </p>
                 </div>
+                <div className="space-y-4">
+                  <p><strong>Full Name:</strong> {userData.firstName} {userData.lastName}</p>
+                  <p><strong>Email:</strong> {userData.email}</p>
+                  <p><strong>Birthday:</strong> {userData.birthday}</p>
+                  <p><strong>Customer ID:</strong> {userData.customerId}</p>
+                  <p><strong>Account Created:</strong> {new Date(userData.createdAt).toLocaleDateString()}</p>
+                </div>
                 <div className="flex flex-col gap-3 min-[400px]:flex-row">
-                  <Button size="lg" className="bg-primary hover:bg-primary/90" onClick={handleStartRefinancing}>
+                  <Button size="lg" className="bg-primary hover:bg-primary/90">
                     Start Refinancing <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="lg" className="border-2" asChild>
