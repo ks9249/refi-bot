@@ -14,47 +14,43 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface EducationEmploymentData {
+interface EducationData {
   education: string;
   school: string;
+  enrollmentStatus: string;
   graduationYear: string;
-  employer: string;
-  occupation: string;
-  employmentLength: string;
 }
 
-interface EducationEmploymentStepProps {
+interface EducationStepProps {
   formData: {
-    educationEmployment?: EducationEmploymentData;
+    educationEmployment?: EducationData;
   };
-  onSubmit: (data: EducationEmploymentData) => void;
+  onSubmit: (data: EducationData) => void;
 }
 
-const educationEmploymentSchema = z.object({
+const educationSchema = z.object({
   education: z.string().min(1, "Please select your education level"),
   school: z.string().min(2, "Please enter your school name"),
-  graduationYear: z.string().regex(/^\d{4}$/, "Please enter a valid year"),
-  employer: z.string().min(2, "Please enter your employer name"),
-  occupation: z.string().min(2, "Please enter your occupation"),
-  employmentLength: z.string().min(1, "Please select your employment length")
+  enrollmentStatus: z.string().min(1, "Please select your enrollment status"),
+  graduationYear: z.string().regex(/^(0[1-9]|1[0-2])\/\d{4}$/, "Please enter a valid date in MM/YYYY format"),
 });
 
-const EducationEmploymentStep: React.FC<EducationEmploymentStepProps> = ({ formData, onSubmit }) => {
+const EducationStep: React.FC<EducationStepProps> = ({ formData, onSubmit }) => {
   const {
     register,
     handleSubmit,
     formState: { errors },
     setValue,
     watch
-  } = useForm<EducationEmploymentData>({
-    resolver: zodResolver(educationEmploymentSchema),
+  } = useForm<EducationData>({
+    resolver: zodResolver(educationSchema),
     defaultValues: formData.educationEmployment || {}
   });
 
   return (
     <form id="step-2-form" onSubmit={handleSubmit(onSubmit)}>
       <Card>
-        <CardContent className="space-y-6">
+        <CardContent className="pt-6 space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Education Level</Label>
@@ -82,7 +78,11 @@ const EducationEmploymentStep: React.FC<EducationEmploymentStepProps> = ({ formD
 
             <div className="space-y-2">
               <Label htmlFor="school">School Name</Label>
-              <Input id="school" {...register("school")} />
+              <Input 
+                id="school" 
+                {...register("school")} 
+                placeholder="Enter your school name"
+              />
               {errors.school && (
                 <Alert variant="destructive">
                   <AlertDescription>{errors.school.message}</AlertDescription>
@@ -91,60 +91,38 @@ const EducationEmploymentStep: React.FC<EducationEmploymentStepProps> = ({ formD
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="graduationYear">Graduation Year</Label>
+              <Label>Enrollment Status</Label>
+              <Select 
+                onValueChange={(value) => setValue('enrollmentStatus', value)}
+                defaultValue={watch('enrollmentStatus')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select enrollment status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full-time">Full Time</SelectItem>
+                  <SelectItem value="half-time">Half Time</SelectItem>
+                  <SelectItem value="less-than-half">Less than Half Time</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.enrollmentStatus && (
+                <Alert variant="destructive">
+                  <AlertDescription>{errors.enrollmentStatus.message}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="graduationYear">Graduation Date</Label>
               <Input 
                 id="graduationYear" 
                 {...register("graduationYear")} 
-                placeholder="YYYY"
-                maxLength={4}
+                placeholder="MM/YYYY"
+                maxLength={7}
               />
               {errors.graduationYear && (
                 <Alert variant="destructive">
                   <AlertDescription>{errors.graduationYear.message}</AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="employer">Current Employer</Label>
-              <Input id="employer" {...register("employer")} />
-              {errors.employer && (
-                <Alert variant="destructive">
-                  <AlertDescription>{errors.employer.message}</AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="occupation">Occupation</Label>
-              <Input id="occupation" {...register("occupation")} />
-              {errors.occupation && (
-                <Alert variant="destructive">
-                  <AlertDescription>{errors.occupation.message}</AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Length of Employment</Label>
-              <Select 
-                onValueChange={(value) => setValue('employmentLength', value)}
-                defaultValue={watch('employmentLength')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employment length" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0-1">Less than 1 year</SelectItem>
-                  <SelectItem value="1-2">1-2 years</SelectItem>
-                  <SelectItem value="2-5">2-5 years</SelectItem>
-                  <SelectItem value="5-10">5-10 years</SelectItem>
-                  <SelectItem value="10+">10+ years</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.employmentLength && (
-                <Alert variant="destructive">
-                  <AlertDescription>{errors.employmentLength.message}</AlertDescription>
                 </Alert>
               )}
             </div>
@@ -155,4 +133,4 @@ const EducationEmploymentStep: React.FC<EducationEmploymentStepProps> = ({ formD
   );
 };
 
-export default EducationEmploymentStep;
+export default EducationStep;

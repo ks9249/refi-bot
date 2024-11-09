@@ -46,17 +46,13 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
     watch
   } = useForm<LoanInfoData>({
     resolver: zodResolver(loanInfoSchema),
-    defaultValues: formData.loanInfo || {
-      loanAmount: 0,
-      interestRate: 0,
-      loanTerm: 0
-    }
+    defaultValues: formData.loanInfo || {}
   });
 
   return (
     <form id="step-3-form" onSubmit={handleSubmit(onSubmit)}>
       <Card>
-        <CardContent className="space-y-6">
+        <CardContent className="pt-6 space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Loan Type</Label>
@@ -65,7 +61,7 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
                 defaultValue={watch('loanType')}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select loan type" />
+                  <SelectValue placeholder="Select Loan Type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="federal">Federal Student Loan</SelectItem>
@@ -86,6 +82,7 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
                 id="loanAmount" 
                 type="number" 
                 {...register("loanAmount", { valueAsNumber: true })}
+                placeholder="e.g. $10,000"
               />
               {errors.loanAmount && (
                 <Alert variant="destructive">
@@ -101,6 +98,7 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
                 type="number" 
                 step="0.1"
                 {...register("interestRate", { valueAsNumber: true })}
+                placeholder="e.g. 8%"
               />
               {errors.interestRate && (
                 <Alert variant="destructive">
@@ -115,6 +113,7 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
                 id="loanTerm" 
                 type="number"
                 {...register("loanTerm", { valueAsNumber: true })}
+                placeholder="e.g. 10 years"
               />
               {errors.loanTerm && (
                 <Alert variant="destructive">
@@ -125,7 +124,11 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
 
             <div className="space-y-2">
               <Label htmlFor="currentLender">Current Lender</Label>
-              <Input id="currentLender" {...register("currentLender")} />
+              <Input 
+                id="currentLender" 
+                {...register("currentLender")}
+                placeholder="e.g. SoFi"
+              />
               {errors.currentLender && (
                 <Alert variant="destructive">
                   <AlertDescription>{errors.currentLender.message}</AlertDescription>
