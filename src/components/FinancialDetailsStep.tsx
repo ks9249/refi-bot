@@ -41,9 +41,6 @@ const FinancialDetailsStep: React.FC<FinancialDetailsStepProps> = ({ formData, o
   } = useForm<FinancialDetailsData>({
     resolver: zodResolver(financialDetailsSchema),
     defaultValues: formData.financialDetails || {
-      annualIncome: 0,
-      monthlyDebt: 0,
-      creditScore: 300,
       bankruptcyHistory: false,
       cosignerAvailable: false
     }
@@ -52,13 +49,14 @@ const FinancialDetailsStep: React.FC<FinancialDetailsStepProps> = ({ formData, o
   return (
     <form id="step-4-form" onSubmit={handleSubmit(onSubmit)}>
       <Card>
-        <CardContent className="space-y-6">
+        <CardContent className="pt-6 space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="annualIncome">Annual Income ($)</Label>
               <Input 
                 id="annualIncome" 
                 type="number"
+                placeholder="e.g. $75000"
                 {...register("annualIncome", { valueAsNumber: true })}
               />
               {errors.annualIncome && (
@@ -73,6 +71,7 @@ const FinancialDetailsStep: React.FC<FinancialDetailsStepProps> = ({ formData, o
               <Input 
                 id="monthlyDebt" 
                 type="number"
+                placeholder="e.g. $1200"
                 {...register("monthlyDebt", { valueAsNumber: true })}
               />
               {errors.monthlyDebt && (
@@ -89,6 +88,7 @@ const FinancialDetailsStep: React.FC<FinancialDetailsStepProps> = ({ formData, o
                 type="number"
                 min="300"
                 max="850"
+                placeholder="e.g. 720"
                 {...register("creditScore", { valueAsNumber: true })}
               />
               {errors.creditScore && (

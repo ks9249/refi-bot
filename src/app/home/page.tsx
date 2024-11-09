@@ -22,15 +22,15 @@ interface PersonalInfoData {
   phone: string;
   address: string;
   dateOfBirth: string;
+  ssn: string;
+  citizenshipStatus: string;
 }
 
 interface EducationEmploymentData {
   education: string;
   school: string;
+  enrollmentStatus: string;
   graduationYear: string;
-  employer: string;
-  occupation: string;
-  employmentLength: string;
 }
 
 interface LoanInfoData {
@@ -93,8 +93,8 @@ interface Step {
 }
 
 const steps: Step[] = [
-  { id: 1, name: 'Personal Information', component: PersonalInfoStep },
-  { id: 2, name: 'Education & Employment', component: EducationEmploymentStep },
+  { id: 1, name: 'Personal Info', component: PersonalInfoStep },
+  { id: 2, name: 'Education', component: EducationEmploymentStep },
   { id: 3, name: 'Loan Information', component: LoanInfoStep },
   { id: 4, name: 'Financial Details', component: FinancialDetailsStep }
 ]
