@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,15 +19,22 @@ interface AuthDialogProps {
   triggerClassName?: string
   triggerChildren?: React.ReactNode
   variant?: 'default' | 'text'
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function AuthDialog({ triggerClassName, triggerChildren, variant = 'default' }: AuthDialogProps) {
+export function AuthDialog({ triggerClassName, triggerChildren, variant = 'default', isOpen, onOpenChange }: AuthDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [user] = useAuthState(auth)
   const [activeTab, setActiveTab] = useState<'log-in' | 'sign-up'>('log-in')
   const router = useRouter()
+
+  useEffect(() => {
+    if (user) {
+      onOpenChange?.(false)
+    }
+  }, [user, onOpenChange])
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -68,7 +75,7 @@ export function AuthDialog({ triggerClassName, triggerChildren, variant = 'defau
       }
 
       console.log('Authentication successful')
-      setIsOpen(false)
+      onOpenChange?.(false)
       router.push('/home')
     } catch (error: any) {
       console.error('Authentication failed', error)
@@ -105,15 +112,15 @@ export function AuthDialog({ triggerClassName, triggerChildren, variant = 'defau
   const TriggerComponent = variant === 'text' ? 'span' : Button
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <TriggerComponent 
           className={triggerClassName}
-          onClick={() => setIsOpen(true)}
+          onClick={() => onOpenChange?.(true)}
           {...(variant === 'text' ? {
             role: "button",
             tabIndex: 0,
-            onKeyDown: (e: React.KeyboardEvent) => e.key === 'Enter' && setIsOpen(true)
+            onKeyDown: (e: React.KeyboardEvent) => e.key === 'Enter' && onOpenChange?.(true)
           } : {})}
         >
           {user ? `Welcome, ${user.displayName}` : (triggerChildren || "Sign Up / Log In")}
