@@ -28,6 +28,7 @@ interface RefinancingOptionsProps {
   onRefresh: () => void;
   useDummyData: boolean;
   onToggleDummyData: () => void;
+  userEmail?: string;
 }
 
 // Define recommended lenders (rows 3, 5, 6, 7, and 10)
@@ -71,11 +72,14 @@ const RefinancingOptions: React.FC<RefinancingOptionsProps> = ({
   isLoading, 
   onRefresh, 
   useDummyData, 
-  onToggleDummyData 
+  onToggleDummyData,
+  userEmail 
 }) => {
   const [parsedLenders, setParsedLenders] = useState<ParsedLenderOption[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: 'averageAPR' | 'averageTerm', direction: 'asc' | 'desc' } | null>(null);
   const [showRecommendedOnly, setShowRecommendedOnly] = useState(false);
+
+  const isDeveloper = userEmail === "kevinson1215@gmail.com";
 
   useEffect(() => {
     const newParsedLenders = lenders.map(lender => ({
@@ -151,10 +155,12 @@ const RefinancingOptions: React.FC<RefinancingOptionsProps> = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <Switch
-            checked={useDummyData}
-            onCheckedChange={onToggleDummyData}
-          />
+          {isDeveloper && (
+            <Switch
+              checked={useDummyData}
+              onCheckedChange={onToggleDummyData}
+            />
+          )}
           <Button variant="outline" size="icon" onClick={onRefresh} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -228,7 +234,7 @@ const RefinancingOptions: React.FC<RefinancingOptionsProps> = ({
               </Table>
             </ScrollArea>
             {showRecommendedOnly && (
-              <div className="flex-grow flex items-center justify-center text-xl pt-8"> {/* Use flex-grow to center in remaining space */}
+              <div className="flex-grow flex items-center justify-center text-xl pt-8">
                 Under the best plan, you will save <span className="font-medium text-green-600 dark:text-green-400 mx-1">$371</span> per year!
               </div>
             )}
