@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -10,7 +10,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 interface FinancialDetailsData {
   annualIncome: number;
-  monthlyDebt: number;
   creditScore: number;
   bankruptcyHistory: boolean;
   cosignerAvailable: boolean;
@@ -23,9 +22,20 @@ interface FinancialDetailsStepProps {
   onSubmit: (data: FinancialDetailsData) => void;
 }
 
+interface NessieLoanResponse {
+  _id: string;
+  type: string;
+  status: string;
+  credit_score: number;
+  monthly_payment: number;
+  amount: number;
+  description: string;
+  creation_date: string;
+  account_id: string;
+}
+
 const financialDetailsSchema = z.object({
   annualIncome: z.number().min(1, "Annual income must be greater than 0"),
-  monthlyDebt: z.number().min(0, "Monthly debt payments cannot be negative"),
   creditScore: z.number().min(300).max(850, "Credit score must be between 300 and 850"),
   bankruptcyHistory: z.boolean(),
   cosignerAvailable: z.boolean()
@@ -37,14 +47,44 @@ const FinancialDetailsStep: React.FC<FinancialDetailsStepProps> = ({ formData, o
     handleSubmit,
     formState: { errors },
     setValue,
-    watch
+    watch,
+    reset
   } = useForm<FinancialDetailsData>({
     resolver: zodResolver(financialDetailsSchema),
-    defaultValues: formData.financialDetails || {
+    defaultValues: {
+      ...formData.financialDetails,
       bankruptcyHistory: false,
       cosignerAvailable: false
     }
   });
+
+  useEffect(() => {
+    const fetchLoanData = async () => {
+      try {
+        const response = await fetch(
+          'http://api.nessieisreal.com/loans/6730429e9683f20dd518b84f?key=c6e68ff679e78f0c810022fcababc5a5'
+        );
+        
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const loan: NessieLoanResponse = await response.json();
+        
+        reset({
+          annualIncome: formData.financialDetails?.annualIncome || 0,
+          creditScore: loan.credit_score,
+          bankruptcyHistory: formData.financialDetails?.bankruptcyHistory || false,
+          cosignerAvailable: formData.financialDetails?.cosignerAvailable || false
+        });
+        
+      } catch (error) {
+        console.error('Error fetching loan data:', error);
+      }
+    };
+
+    fetchLoanData();
+  }, [reset, formData.financialDetails]);
 
   return (
     <form id="step-4-form" onSubmit={handleSubmit(onSubmit)}>
@@ -62,21 +102,6 @@ const FinancialDetailsStep: React.FC<FinancialDetailsStepProps> = ({ formData, o
               {errors.annualIncome && (
                 <Alert variant="destructive">
                   <AlertDescription>{errors.annualIncome.message}</AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="monthlyDebt">Monthly Debt Payments ($)</Label>
-              <Input 
-                id="monthlyDebt" 
-                type="number"
-                placeholder="e.g. $1200"
-                {...register("monthlyDebt", { valueAsNumber: true })}
-              />
-              {errors.monthlyDebt && (
-                <Alert variant="destructive">
-                  <AlertDescription>{errors.monthlyDebt.message}</AlertDescription>
                 </Alert>
               )}
             </div>

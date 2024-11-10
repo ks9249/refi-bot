@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -29,6 +29,18 @@ interface LoanInfoStepProps {
   onSubmit: (data: LoanInfoData) => void;
 }
 
+interface NessieLoanResponse {
+  _id: string;
+  type: string;
+  status: string;
+  credit_score: number;
+  monthly_payment: number;
+  amount: number;
+  description: string;
+  creation_date: string;
+  account_id: string;
+}
+
 const loanInfoSchema = z.object({
   loanType: z.string().min(1, "Please select a loan type"),
   loanAmount: z.number().min(1000, "Loan amount must be at least $1,000"),
@@ -43,11 +55,48 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
     handleSubmit,
     formState: { errors },
     setValue,
-    watch
+    watch,
+    reset
   } = useForm<LoanInfoData>({
     resolver: zodResolver(loanInfoSchema),
-    defaultValues: formData.loanInfo || {}
+    defaultValues: {
+      ...formData.loanInfo,
+      loanType: 'private'
+    }
   });
+
+  useEffect(() => {
+    const fetchLoanData = async () => {
+      try {
+        const response = await fetch(
+          'http://api.nessieisreal.com/loans/6730429e9683f20dd518b84f?key=c6e68ff679e78f0c810022fcababc5a5'
+        );
+        
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const loan: NessieLoanResponse = await response.json();
+        
+        // Calculate interest rate and round to nearest tenth
+        const annualPayment = loan.monthly_payment * 12;
+        const interestRate = (annualPayment / loan.amount) * 100;
+        const roundedInterestRate = Math.round(interestRate * 10) / 10;
+
+        reset({
+          loanType: 'private',
+          loanAmount: loan.amount,
+          interestRate: roundedInterestRate,
+          loanTerm: formData.loanInfo?.loanTerm || 10,
+          currentLender: loan.description
+        });
+      } catch (error) {
+        console.error('Error fetching loan data:', error);
+      }
+    };
+
+    fetchLoanData();
+  }, [reset, formData.loanInfo]);
 
   return (
     <form id="step-3-form" onSubmit={handleSubmit(onSubmit)}>
@@ -58,7 +107,7 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
               <Label>Loan Type</Label>
               <Select 
                 onValueChange={(value) => setValue('loanType', value)}
-                defaultValue={watch('loanType')}
+                defaultValue="federal"
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Loan Type" />
@@ -97,7 +146,10 @@ const LoanInfoStep: React.FC<LoanInfoStepProps> = ({ formData, onSubmit }) => {
                 id="interestRate" 
                 type="number" 
                 step="0.1"
-                {...register("interestRate", { valueAsNumber: true })}
+                {...register("interestRate", { 
+                  valueAsNumber: true,
+                  setValueAs: (value) => Math.round(parseFloat(value) * 10) / 10
+                })}
                 placeholder="e.g. 8%"
               />
               {errors.interestRate && (

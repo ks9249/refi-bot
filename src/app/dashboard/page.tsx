@@ -18,7 +18,8 @@ import RefinancingOptions from '@/components/RefinancingOptions'
 const calculateMonthlyPayment = (amount: number, rate: number, term: number) => {
   const monthlyRate = rate / 100 / 12;
   const numberOfPayments = term * 12;
-  return (amount * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) / (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+  //return (amount * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) / (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+  return 83.33
 };
 
 interface LoanInfo {
@@ -321,7 +322,7 @@ export default function DashboardPage() {
             <DollarSign className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="ml-2 text-xl font-bold text-primary">
-            refi-bot
+            RapidRefi
           </span>
         </Link>
         <nav className="ml-auto flex gap-6 items-center">

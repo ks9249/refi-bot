@@ -43,7 +43,6 @@ interface LoanInfoData {
 
 interface FinancialDetailsData {
   annualIncome: number;
-  monthlyDebt: number;
   creditScore: number;
   bankruptcyHistory: boolean;
   cosignerAvailable: boolean;
@@ -108,32 +107,33 @@ export default function SurveyPage() {
   const [surveyCompleted, setSurveyCompleted] = useState(false)
   const router = useRouter()
 
+  // Combined authentication and survey check effect
   useEffect(() => {
     if (!user && !loading) {
       router.push('/')
+      return
+    }
+
+    if (user) {
+      const checkExistingSurvey = async () => {
+        try {
+          const userDocRef = doc(db, 'users', user.uid)
+          const userDoc = await getDoc(userDocRef)
+          
+          if (userDoc.exists() && userDoc.data()?.surveyData) {
+            setSurveyCompleted(true)
+            router.push('/dashboard')
+          }
+        } catch (error) {
+          console.error('Error checking survey data:', error)
+        } finally {
+          setCheckingSurvey(false)
+        }
+      }
+
+      checkExistingSurvey()
     }
   }, [user, loading, router])
-
-  useEffect(() => {
-    const checkExistingSurvey = async () => {
-      if (!user) return
-      
-      try {
-        const userDocRef = doc(db, 'users', user.uid)
-        const userDoc = await getDoc(userDocRef)
-        
-        if (userDoc.exists() && userDoc.data()?.surveyData) {
-          setSurveyCompleted(true)
-        }
-      } catch (error) {
-        console.error('Error checking survey data:', error)
-      } finally {
-        setCheckingSurvey(false)
-      }
-    }
-
-    checkExistingSurvey()
-  }, [user])
 
   const handleSignOut = () => {
     signOut(auth)
@@ -193,6 +193,7 @@ export default function SurveyPage() {
       }
 
       setSurveyCompleted(true)
+      router.push('/dashboard')
     } catch (error) {
       console.error('Error submitting form:', error)
     } finally {
@@ -223,6 +224,10 @@ export default function SurveyPage() {
     return null
   }
 
+  if (surveyCompleted) {
+    return null // Return null while redirecting
+  }
+
   const Layout = ({ children }: { children: React.ReactNode }) => (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-zinc-100 to-white dark:from-zinc-900 dark:to-zinc-800">
       <header className="px-4 lg:px-8 h-14 flex items-center border-b bg-white/50 backdrop-blur-sm dark:bg-zinc-900/50">
@@ -231,7 +236,7 @@ export default function SurveyPage() {
             <DollarSign className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="ml-2 text-xl font-bold text-primary">
-            refi-bot
+            RapidRefi
           </span>
         </Link>
         <nav className="ml-auto flex gap-6 items-center">
@@ -253,16 +258,6 @@ export default function SurveyPage() {
       </footer>
     </div>
   )
-
-  if (surveyCompleted) {
-    return (
-      <Layout>
-        <main className="flex-1 container max-w-4xl mx-auto px-4 py-8 flex items-center justify-center">
-          <h1 className="text-4xl font-bold">Home</h1>
-        </main>
-      </Layout>
-    )
-  }
 
   const CurrentStepComponent = steps[currentStep - 1].component
   const currentStepProps = {

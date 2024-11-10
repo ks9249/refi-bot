@@ -132,7 +132,7 @@ export function AuthDialog({ triggerClassName, triggerChildren, variant = 'defau
         </VisuallyHidden>
         <Card>
           <CardHeader className="text-center space-y-2">
-            <CardTitle className="text-3xl font-bold">Welcome to refi-bot</CardTitle>
+            <CardTitle className="text-3xl font-bold">Welcome to RapidRefi</CardTitle>
             <CardDescription className="text-base">
               Log in or sign up to get started
             </CardDescription>

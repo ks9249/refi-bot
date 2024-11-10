@@ -31,7 +31,7 @@ export default function LandingPage() {
             <DollarSign className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="ml-2 text-xl font-bold text-primary">
-            refi-bot
+            RapidRefi
           </span>
         </Link>
         <nav className="ml-auto flex gap-6 items-center">
