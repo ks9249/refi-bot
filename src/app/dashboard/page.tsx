@@ -438,6 +438,7 @@ export default function DashboardPage() {
                     onRefresh={handleRefreshLenderOptions}
                     useDummyData={useDummyData}
                     onToggleDummyData={handleToggleDummyData}
+                    userEmail={user?.email || ''}
                   />
                 </div>
               </>
